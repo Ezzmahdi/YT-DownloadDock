@@ -47,33 +47,24 @@ function updateCategoryList() {
         categories.forEach(category => {
             const li = document.createElement("li");
             li.innerText = category;
-            li.classList.add("category-item");
             li.style.padding = "8px";
+            li.style.borderBottom = "1px solid #ddd";
             li.style.cursor = "pointer";
             li.style.background = "#fff";
             li.style.borderRadius = "5px";
             li.style.marginBottom = "5px";
             li.style.textAlign = "center";
-            li.style.border = "1px solid #ddd";
-            li.style.transition = "background 0.3s";
 
-            li.addEventListener("mouseover", () => li.style.background = "#e6e6e6");
-            li.addEventListener("mouseout", () => li.style.background = "#fff");
+            li.addEventListener("click", function () {
+                filterVideosByCategory(category);
+            });
 
-            // 🛑 Enable Drag & Drop for Categories
+            // Enable drag & drop for category names
             li.addEventListener("dragover", (event) => event.preventDefault());
             li.addEventListener("drop", (event) => {
                 event.preventDefault();
                 const videoUrl = event.dataTransfer.getData("text/plain").trim();
-                if (!videoUrl || !videoUrl.includes("watch?v=")) {
-                    console.error("❌ Invalid video URL!");
-                    return;
-                }
                 saveVideoToCategory(category, videoUrl);
-            });
-
-            li.addEventListener("click", function () {
-                filterVideosByCategory(category);
             });
 
             categoryList.appendChild(li);
@@ -85,21 +76,26 @@ function updateCategoryList() {
 function filterVideosByCategory(category) {
     chrome.storage.local.get(["videoCategories"], function (result) {
         const videoCategories = result.videoCategories || {};
-        const allowedVideos = videoCategories[category] || [];
+        const allowedVideos = videoCategories[category] || []; 
 
-        const videoElements = document.querySelectorAll("ytd-playlist-video-renderer, ytd-rich-item-renderer"); // ✅ Now supports multiple video types
+        console.log(`Allowed videos for category "${category}":`, allowedVideos);
+
+        const videoElements = document.querySelectorAll("ytd-rich-item-renderer, ytd-video-renderer, ytd-playlist-video-renderer");
 
         let found = 0;
-        videoElements.forEach((videoElement) => {
-            const videoLink = videoElement.querySelector("a#thumbnail")?.href;
-            if (!videoLink) return;
 
-            const cleanVideoUrl = extractVideoID(videoLink);
-            if (allowedVideos.includes(cleanVideoUrl)) {
-                videoElement.style.display = "block"; // ✅ Show videos in category
+        videoElements.forEach((videoElement) => {
+            const thumbnail = videoElement.querySelector("ytd-thumbnail a");
+            if (!thumbnail || !thumbnail.href) return;
+
+            const videoLink = extractVideoID(thumbnail.href);
+            console.log(`Checking video: ${videoLink}`);
+
+            if (allowedVideos.includes(videoLink)) {
+                videoElement.style.display = "";
                 found++;
             } else {
-                videoElement.style.display = "none"; // ✅ Hide videos not in category
+                videoElement.style.display = "none";
             }
         });
 
@@ -107,20 +103,27 @@ function filterVideosByCategory(category) {
     });
 }
 
+
+
+
 // ✨ Helper function to clean video URL (Fix Matching Issue)
 function extractVideoID(url) {
+    if (!url || typeof url !== "string") return "";
     const match = url.match(/watch\?v=([a-zA-Z0-9_-]+)/);
-    return match ? `https://www.youtube.com/watch?v=${match[1]}` : url;
+    return match ? match[1] : ""; // ✅ Returns only the video ID
 }
+
+
+
 
 // 🎥 Make YouTube Videos Draggable
 function makeVideosDraggable() {
     document.querySelectorAll("ytd-thumbnail").forEach((thumbnail) => {
         const anchorTag = thumbnail.closest("a");
-        if (!anchorTag) return;
+        if (!anchorTag || !anchorTag.href) return; // ✅ Prevents null errors
 
         const videoUrl = extractVideoID(anchorTag.href);
-        if (!videoUrl.includes("watch?v=")) return;
+        if (!videoUrl || typeof videoUrl !== "string" || !videoUrl.includes("watch?v=")) return; // ✅ Extra safety check
 
         thumbnail.setAttribute("draggable", "true");
         thumbnail.addEventListener("dragstart", function (event) {
@@ -129,6 +132,7 @@ function makeVideosDraggable() {
         });
     });
 }
+
 
 // ➕ Add New Category
 document.addEventListener("click", function (event) {
@@ -154,7 +158,12 @@ document.addEventListener("click", function (event) {
 
 // 🎯 Save Video to Category
 function saveVideoToCategory(category, videoUrl) {
-    const cleanVideoUrl = extractVideoID(videoUrl); // ✅ Fix URL before saving
+    const videoID = extractVideoID(videoUrl);
+    console.log(`🔍 Extracted video ID: ${videoUrl}`);
+    if (!videoID) {
+        console.error("❌ Error: Invalid video ID.");
+        return;
+    }
 
     chrome.storage.local.get(["videoCategories"], function (result) {
         let videoCategories = result.videoCategories || {};
@@ -163,16 +172,62 @@ function saveVideoToCategory(category, videoUrl) {
             videoCategories[category] = [];
         }
 
-        if (!videoCategories[category].includes(cleanVideoUrl)) {
-            videoCategories[category].push(cleanVideoUrl);
+        if (!videoCategories[category].includes(videoID)) {
+            videoCategories[category].push(videoID);
             chrome.storage.local.set({ videoCategories }, function () {
-                console.log(`✅ Video saved under category: ${category}`);
+                console.log(`✅ Video saved: ${videoID} under category: ${category}`);
+                filterVideosByCategory(category);
             });
         } else {
             console.log(`⚠️ Video already exists in category: ${category}`);
         }
     });
 }
+
+
+document.addEventListener("click", function (event) {
+    if (event.target && event.target.id === "add-category") {
+        const categoryName = document.getElementById("new-category").value.trim();
+        if (!categoryName) return;
+
+        chrome.storage.local.get(["categories"], function (result) {
+            const categories = result.categories || [];
+            if (categories.includes(categoryName)) {
+                alert("Category already exists!");
+                return;
+            }
+
+            categories.push(categoryName);
+            chrome.storage.local.set({ categories }, function () {
+                updateCategoryList();
+                document.getElementById("new-category").value = "";
+            });
+        });
+    }
+});
+
+
+document.addEventListener("drop", function (event) {
+    event.preventDefault();
+    const videoUrl = event.dataTransfer.getData("text/plain").trim();
+    console.log("🎥 Dragged video URL:", videoUrl);
+
+    if (!videoUrl || !videoUrl.includes("watch?v=")) {
+        console.error("❌ No valid video URL was dragged!");
+        alert("Error: No valid video URL found.");
+        return;
+    }
+});
+
+document.addEventListener("dragover", function (event) {
+    event.preventDefault();
+});
+
+// 👀 **Observer to Reapply Filtering on New Videos**
+const observer = new MutationObserver(() => {
+    makeVideosDraggable();
+});
+observer.observe(document.body, { childList: true, subtree: true });
 
 // 🚀 Run Everything on Load
 window.onload = function () {
