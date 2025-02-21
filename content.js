@@ -1,181 +1,136 @@
 console.log("YouTube Download Organizer extension loaded!");
-document.querySelectorAll("a#thumbnail").forEach((el) => console.log(el.href));
 
+// 🛑 Wait for Sidebar to Load
+function waitForSidebar() {
+    const checkSidebar = setInterval(() => {
+        const sidebar = document.querySelector("ytd-guide-section-renderer");
+        if (sidebar) {
+            clearInterval(checkSidebar);
+            injectSidebarUI();
+        }
+    }, 1000);
+}
 
-// Inject the UI panel
-function injectUI() {
-    if (document.getElementById("custom-download-organizer")) return;
+// 🏗️ Inject Categories into YouTube Sidebar
+function injectSidebarUI() {
+    const sidebar = document.querySelector("ytd-guide-section-renderer");
+    if (!sidebar) return;
 
-    const organizerUI = document.createElement("div");
-    organizerUI.id = "custom-download-organizer";
-    organizerUI.style.position = "fixed";
-    organizerUI.style.right = "20px";
-    organizerUI.style.top = "80px";
-    organizerUI.style.background = "#ffffff";
-    organizerUI.style.padding = "20px";
-    organizerUI.style.borderRadius = "12px";
-    organizerUI.style.boxShadow = "0px 4px 12px rgba(0,0,0,0.3)";
-    organizerUI.style.zIndex = "10000";
-    organizerUI.style.width = "320px";
-    organizerUI.style.fontFamily = "Arial, sans-serif";
-    organizerUI.style.border = "1px solid #ddd";
-    organizerUI.style.textAlign = "center";
+    if (document.getElementById("sidebar-category-organizer")) return;
 
-    organizerUI.innerHTML = `
-        <h2 style="color: #333; margin-bottom: 15px; font-size: 18px;">🎥 YouTube Organizer</h2>
+    const categoryBox = document.createElement("div");
+    categoryBox.id = "sidebar-category-organizer";
+    categoryBox.style.padding = "10px";
+    categoryBox.style.marginTop = "10px";
+    categoryBox.style.background = "#f9f9f9";
+    categoryBox.style.borderRadius = "10px";
+    categoryBox.style.border = "1px solid #ddd";
 
-        <div style="padding: 10px; background: #f8f8f8; border-radius: 8px; border: 1px solid #ddd;">
-            <h3 style="font-size: 14px; margin-bottom: 10px; color: #555;">Categories</h3>
-            <ul id="category-list" style="
-                list-style: none; padding: 5px; margin: 0; max-height: 100px; overflow-y: auto;
-                border: 1px solid #ccc; border-radius: 6px; background: #fff; text-align: left;">
-            </ul>
-        </div>
-
-        <div style="margin-top: 15px;">
-            <input type="text" id="new-category" placeholder="Enter category name" 
-                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
-            <button id="add-category" 
-                style="width: 100%; padding: 8px; margin-top: 8px; background: #ff4444; color: white; 
-                border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-                ➕ Add Category
-            </button>
-        </div>
-
-        <h3 style="margin-top: 20px; font-size: 14px; color: #555;">Select a Category</h3>
-        <select id="category-dropdown" style="
-            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
-            <option value="" disabled selected>Choose a category</option>
-        </select>
-
-        <div id="category-videos" style="
-            max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; 
-            background: #fafafa; border-radius: 8px; margin-top: 15px; text-align: left;">
-            <p style="color: gray;">No videos selected.</p>
-        </div>
+    categoryBox.innerHTML = `
+        <h3 style="font-size: 14px; color: #333; margin-bottom: 10px;">🎯 Categories</h3>
+        <ul id="category-list" style="list-style: none; padding: 5px; margin: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 6px; background: #fff;"></ul>
+        <input type="text" id="new-category" placeholder="New category" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+        <button id="add-category" style="width: 100%; padding: 6px; background: #ff4444; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 8px;">➕ Add</button>
     `;
 
-    document.body.appendChild(organizerUI);
-
+    sidebar.appendChild(categoryBox);
     updateCategoryList();
-
 }
 
-function makeVideosDraggable() {
-    document.querySelectorAll("ytd-thumbnail").forEach((thumbnail) => {
-        // Get the closest anchor tag
-        const anchorTag = thumbnail.closest("a");
-        if (!anchorTag) return; // Skip if no link is found
-
-        const videoUrl = anchorTag.href;
-        if (!videoUrl.includes("watch?v=")) return; // Only allow valid YouTube videos
-
-        // Make the thumbnail draggable
-        thumbnail.setAttribute("draggable", "true");
-        thumbnail.addEventListener("dragstart", function (event) {
-            event.dataTransfer.setData("text/plain", videoUrl);
-            console.log(`🎬 Video dragged: ${videoUrl}`);
-        });
-    });
-}
-
-
-// Function to update category list and dropdown
+// 📝 Update Category List (Now Handles Drag & Drop!)
 function updateCategoryList() {
     chrome.storage.local.get(["categories"], function (result) {
         const categoryList = document.getElementById("category-list");
-        const categoryDropdown = document.getElementById("category-dropdown");
         categoryList.innerHTML = "";
-        categoryDropdown.innerHTML = '<option value="" disabled selected>Select a category</option>';
 
         const categories = result.categories || [];
         categories.forEach(category => {
             const li = document.createElement("li");
             li.innerText = category;
+            li.classList.add("category-item");
             li.style.padding = "8px";
-            li.style.borderBottom = "1px solid #ddd";
             li.style.cursor = "pointer";
             li.style.background = "#fff";
             li.style.borderRadius = "5px";
             li.style.marginBottom = "5px";
             li.style.textAlign = "center";
+            li.style.border = "1px solid #ddd";
+            li.style.transition = "background 0.3s";
+
+            li.addEventListener("mouseover", () => li.style.background = "#e6e6e6");
+            li.addEventListener("mouseout", () => li.style.background = "#fff");
+
+            // 🛑 Enable Drag & Drop for Categories
+            li.addEventListener("dragover", (event) => event.preventDefault());
+            li.addEventListener("drop", (event) => {
+                event.preventDefault();
+                const videoUrl = event.dataTransfer.getData("text/plain").trim();
+                if (!videoUrl || !videoUrl.includes("watch?v=")) {
+                    console.error("❌ Invalid video URL!");
+                    return;
+                }
+                saveVideoToCategory(category, videoUrl);
+            });
+
             li.addEventListener("click", function () {
-                showVideosInCategory(category);
+                filterVideosByCategory(category);
             });
+
             categoryList.appendChild(li);
-
-            // Add category to the dropdown
-            const option = document.createElement("option");
-            option.value = category;
-            option.innerText = category;
-            categoryDropdown.appendChild(option);
         });
     });
 }
 
-// Function to save a video to a category
-function saveVideoToCategory(category, videoUrl) {
-    if (!videoUrl || videoUrl.trim() === "") {
-        console.error("❌ Error: Video URL is empty or invalid.");
-        return;
-    }
-
+// 🔍 ✅ **Fixed: Hide Videos When Clicking a Category**
+function filterVideosByCategory(category) {
     chrome.storage.local.get(["videoCategories"], function (result) {
-        let videoCategories = result.videoCategories || {};
-
-        if (!videoCategories[category]) {
-            videoCategories[category] = [];
-        }
-
-        // Prevent duplicate videos
-        if (!videoCategories[category].includes(videoUrl)) {
-            videoCategories[category].push(videoUrl);
-            chrome.storage.local.set({ videoCategories }, function () {
-                console.log(`✅ Video saved: ${videoUrl} under category: ${category}`);
-                showVideosInCategory(category);
-            });
-        } else {
-            console.log(`⚠️ Video already exists in category: ${category}`);
-        }
-
-        // 🔄 Force UI refresh
-        updateCategoryList();
-        showVideosInCategory(category);
-    });
-}
-
-
-
-// Function to retrieve and display videos under a category
-function showVideosInCategory(category) {
-    chrome.storage.local.get(["videoCategories"], function (result) {
-        console.log("Retrieving videos for category:", category);
-        console.log("Full Storage Data:", result.videoCategories);
-
         const videoCategories = result.videoCategories || {};
-        const categoryVideosDiv = document.getElementById("category-videos");
-        categoryVideosDiv.innerHTML = `<p style="color: gray;">Loading videos...</p>`;
+        const allowedVideos = videoCategories[category] || [];
 
-        const videos = videoCategories[category] || [];
+        const videoElements = document.querySelectorAll("ytd-playlist-video-renderer, ytd-rich-item-renderer"); // ✅ Now supports multiple video types
 
-        if (videos.length === 0) {
-            categoryVideosDiv.innerHTML = "<p style='color: gray;'>No videos in this category.</p>";
-            return;
-        }
+        let found = 0;
+        videoElements.forEach((videoElement) => {
+            const videoLink = videoElement.querySelector("a#thumbnail")?.href;
+            if (!videoLink) return;
 
-        let videoHTML = "";
-        videos.forEach(videoUrl => {
-            videoHTML += `<div style="margin-bottom: 10px;">
-                <a href="${videoUrl}" target="_blank" 
-                    style="color: #0073ff; text-decoration: none; font-size: 14px;">${videoUrl}</a>
-            </div>`;
+            const cleanVideoUrl = extractVideoID(videoLink);
+            if (allowedVideos.includes(cleanVideoUrl)) {
+                videoElement.style.display = "block"; // ✅ Show videos in category
+                found++;
+            } else {
+                videoElement.style.display = "none"; // ✅ Hide videos not in category
+            }
         });
 
-        categoryVideosDiv.innerHTML = videoHTML;
+        console.log(`📂 Showing ${found} videos from category: ${category}`);
     });
 }
 
-// Function to add a new category
+// ✨ Helper function to clean video URL (Fix Matching Issue)
+function extractVideoID(url) {
+    const match = url.match(/watch\?v=([a-zA-Z0-9_-]+)/);
+    return match ? `https://www.youtube.com/watch?v=${match[1]}` : url;
+}
+
+// 🎥 Make YouTube Videos Draggable
+function makeVideosDraggable() {
+    document.querySelectorAll("ytd-thumbnail").forEach((thumbnail) => {
+        const anchorTag = thumbnail.closest("a");
+        if (!anchorTag) return;
+
+        const videoUrl = extractVideoID(anchorTag.href);
+        if (!videoUrl.includes("watch?v=")) return;
+
+        thumbnail.setAttribute("draggable", "true");
+        thumbnail.addEventListener("dragstart", function (event) {
+            event.dataTransfer.setData("text/plain", videoUrl);
+            console.log(`🎬 Dragging video: ${videoUrl}`);
+        });
+    });
+}
+
+// ➕ Add New Category
 document.addEventListener("click", function (event) {
     if (event.target && event.target.id === "add-category") {
         const categoryName = document.getElementById("new-category").value.trim();
@@ -197,38 +152,30 @@ document.addEventListener("click", function (event) {
     }
 });
 
-// Function to handle video drag and drop into categories
-document.addEventListener("drop", function (event) {
-    event.preventDefault();
+// 🎯 Save Video to Category
+function saveVideoToCategory(category, videoUrl) {
+    const cleanVideoUrl = extractVideoID(videoUrl); // ✅ Fix URL before saving
 
-    const videoUrl = event.dataTransfer.getData("text/plain").trim();
-    console.log("🎥 Dragged video URL:", videoUrl);
+    chrome.storage.local.get(["videoCategories"], function (result) {
+        let videoCategories = result.videoCategories || {};
 
-    if (!videoUrl || !videoUrl.includes("watch?v=")) {
-        console.error("❌ No valid video URL was dragged!");
-        alert("Error: No valid video URL found.");
-        return;
-    }
+        if (!videoCategories[category]) {
+            videoCategories[category] = [];
+        }
 
-    const categoryDropdown = document.getElementById("category-dropdown");
-    const selectedCategory = categoryDropdown.value;
+        if (!videoCategories[category].includes(cleanVideoUrl)) {
+            videoCategories[category].push(cleanVideoUrl);
+            chrome.storage.local.set({ videoCategories }, function () {
+                console.log(`✅ Video saved under category: ${category}`);
+            });
+        } else {
+            console.log(`⚠️ Video already exists in category: ${category}`);
+        }
+    });
+}
 
-    if (!selectedCategory) {
-        alert("Please select a category first.");
-        return;
-    }
-
-    saveVideoToCategory(selectedCategory, videoUrl);
-});
-
-
-
-document.addEventListener("dragover", function (event) {
-    event.preventDefault();
-});
-
-// Inject UI when the page loads
+// 🚀 Run Everything on Load
 window.onload = function () {
-    injectUI();
+    waitForSidebar();
     makeVideosDraggable();
 };
