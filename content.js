@@ -10,38 +10,48 @@ function injectUI() {
     organizerUI.id = "custom-download-organizer";
     organizerUI.style.position = "fixed";
     organizerUI.style.right = "20px";
-    organizerUI.style.top = "100px";
-    organizerUI.style.background = "#fff";
-    organizerUI.style.padding = "15px";
-    organizerUI.style.borderRadius = "10px";
-    organizerUI.style.boxShadow = "0px 4px 10px rgba(0,0,0,0.2)";
+    organizerUI.style.top = "80px";
+    organizerUI.style.background = "#ffffff";
+    organizerUI.style.padding = "20px";
+    organizerUI.style.borderRadius = "12px";
+    organizerUI.style.boxShadow = "0px 4px 12px rgba(0,0,0,0.3)";
     organizerUI.style.zIndex = "10000";
-    organizerUI.style.width = "280px";
+    organizerUI.style.width = "320px";
     organizerUI.style.fontFamily = "Arial, sans-serif";
     organizerUI.style.border = "1px solid #ddd";
+    organizerUI.style.textAlign = "center";
 
     organizerUI.innerHTML = `
-        <h3 style="margin-bottom: 10px; font-size: 16px; color: #333;">Categories</h3>
-        <ul id="category-list" 
-            style="list-style: none; padding: 5px; margin: 0 0 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
-        </ul>
-        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-            <input type="text" id="new-category" placeholder="New category" 
-                style="flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2 style="color: #333; margin-bottom: 15px; font-size: 18px;">🎥 YouTube Organizer</h2>
+
+        <div style="padding: 10px; background: #f8f8f8; border-radius: 8px; border: 1px solid #ddd;">
+            <h3 style="font-size: 14px; margin-bottom: 10px; color: #555;">Categories</h3>
+            <ul id="category-list" style="
+                list-style: none; padding: 5px; margin: 0; max-height: 100px; overflow-y: auto;
+                border: 1px solid #ccc; border-radius: 6px; background: #fff; text-align: left;">
+            </ul>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <input type="text" id="new-category" placeholder="Enter category name" 
+                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
             <button id="add-category" 
-                style="padding: 5px 10px; background: #ff0000; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                Add
+                style="width: 100%; padding: 8px; margin-top: 8px; background: #ff4444; color: white; 
+                border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                ➕ Add Category
             </button>
         </div>
 
-        <h3 style="margin-bottom: 10px; font-size: 16px; color: #333;">Videos in Category</h3>
-        <select id="category-dropdown" 
-            style="width: 100%; padding: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <option value="" disabled selected>Select a category</option>
+        <h3 style="margin-top: 20px; font-size: 14px; color: #555;">Select a Category</h3>
+        <select id="category-dropdown" style="
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
+            <option value="" disabled selected>Choose a category</option>
         </select>
 
-        <div id="category-videos" 
-            style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+        <div id="category-videos" style="
+            max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; 
+            background: #fafafa; border-radius: 8px; margin-top: 15px; text-align: left;">
+            <p style="color: gray;">No videos selected.</p>
         </div>
     `;
 
@@ -80,7 +90,6 @@ function updateCategoryList() {
 
         const categories = result.categories || [];
         categories.forEach(category => {
-            // Add category to the list
             const li = document.createElement("li");
             li.innerText = category;
             li.style.padding = "8px";
