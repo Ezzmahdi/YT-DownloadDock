@@ -179,6 +179,48 @@ function injectSidebarUI() {
         .modal-button:hover {
             background-color: #2d2d2d !important;
         }
+
+        .remove-zone {
+            margin: 8px;
+            padding: 12px;
+            border: 2px dashed #ff0000;
+            border-radius: 6px;
+            text-align: center;
+            color: #ff0000;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .remove-zone:hover {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .remove-zone.drag-over {
+            background: rgba(255, 0, 0, 0.2);
+            border-style: solid;
+        }
+
+        .remove-zone svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .category-hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
     `;
     document.head.appendChild(style);
 
@@ -196,6 +238,9 @@ function injectSidebarUI() {
             New Category
         </button>
     `;
+
+    const removeZone = createRemoveZone();
+    categoryBox.appendChild(removeZone);
 
     sidebar.appendChild(categoryBox);
 
@@ -257,6 +302,70 @@ function injectSidebarUI() {
     });
 
     updateCategoryList();
+}
+
+// Function to create the remove zone
+function createRemoveZone() {
+    const removeZone = document.createElement('div');
+    removeZone.className = 'remove-zone';
+    removeZone.innerHTML = `
+        Drop here to remove from all categories
+    `;
+
+    // Add drag and drop event listeners
+    removeZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        removeZone.classList.add('drag-over');
+    });
+
+    removeZone.addEventListener('dragleave', () => {
+        removeZone.classList.remove('drag-over');
+    });
+
+    removeZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        removeZone.classList.remove('drag-over');
+        const videoUrl = e.dataTransfer.getData('text/plain');
+        if (videoUrl) {
+            removeVideoFromAllCategories(videoUrl);
+        }
+    });
+
+    return removeZone;
+}
+
+// Function to remove video from all categories
+function removeVideoFromAllCategories(videoUrl) {
+    const videoID = extractVideoID(videoUrl);
+    if (!videoID) {
+        console.error('Invalid video URL:', videoUrl);
+        return;
+    }
+
+    chrome.storage.local.get(['videoCategories'], function(result) {
+        const videoCategories = result.videoCategories || {};
+        let wasRemoved = false;
+
+        // Remove the video from all categories
+        Object.keys(videoCategories).forEach(category => {
+            if (videoCategories[category].includes(videoID)) {
+                videoCategories[category] = videoCategories[category].filter(id => id !== videoID);
+                updateCategoryCount(category, videoCategories[category].length);
+                wasRemoved = true;
+            }
+        });
+
+        if (wasRemoved) {
+            chrome.storage.local.set({ videoCategories }, function() {
+                showFeedbackMessage('Video removed from all categories');
+                // Refresh the current category view if needed
+                if (activeCategory) {
+                    filterVideosByCategory(activeCategory);
+                }
+            });
+        }
+    });
 }
 
 // Update the updateCategoryList function to show video counts
