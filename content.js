@@ -308,9 +308,13 @@ function updateCategoryList() {
 // Keep track of active category
 let activeCategory = null;
 
+// Keep track of which category a video is being dragged from
+let dragSourceCategory = null;
+
 // Filter Videos and Add Download Buttons
 function filterVideosByCategory(category) {
     chrome.storage.local.get(["videoCategories"], function (result) {
+        dragSourceCategory = category; // Set the source category when filtering
         const videoCategories = result.videoCategories || {};
         const allowedVideos = videoCategories[category] || []; 
 
@@ -473,6 +477,7 @@ function filterVideosByCategory(category) {
 
 // Function to show all videos
 function showAllVideos() {
+    dragSourceCategory = null; // Reset source category when showing all videos
     // Remove any existing category-hidden classes
     document.querySelectorAll('.category-hidden').forEach(el => {
         el.classList.remove('category-hidden');
@@ -521,44 +526,34 @@ function extractVideoID(url) {
 
 // Make YouTube Videos Draggable
 function makeVideosDraggable() {
-    document.querySelectorAll("ytd-thumbnail").forEach((thumbnail) => {
-        const anchorTag = thumbnail.closest("a");
-        if (!anchorTag || !anchorTag.href) return; // Prevents null errors
+    const containers = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer');
+    containers.forEach(container => {
+        const thumbnail = container.querySelector('#thumbnail');
+        if (thumbnail) {
+            thumbnail.draggable = true;
+            
+            thumbnail.addEventListener('dragstart', (event) => {
+                const videoUrl = thumbnail.href;
+                if (videoUrl) {
+                    event.dataTransfer.setData('text/plain', videoUrl);
+                    // If we're in a filtered view, this is our source category
+                    if (activeCategory) {
+                        dragSourceCategory = activeCategory;
+                    }
+                }
+            });
 
-        const videoUrl = extractVideoID(anchorTag.href);
-        if (!videoUrl || typeof videoUrl !== "string" || !videoUrl.includes("watch?v=")) return; // Extra safety check
-
-        thumbnail.setAttribute("draggable", "true");
-        thumbnail.addEventListener("dragstart", function (event) {
-            event.dataTransfer.setData("text/plain", videoUrl);
-            console.log(` Dragging video: ${videoUrl}`);
-        });
+            thumbnail.addEventListener('dragend', () => {
+                // Reset the source category after the drag operation
+                setTimeout(() => {
+                    dragSourceCategory = null;
+                }, 100);
+            });
+        }
     });
 }
 
-// Add New Category
-document.addEventListener("click", function (event) {
-    if (event.target && event.target.id === "add-category") {
-        const categoryName = document.getElementById("new-category-input").value.trim();
-        if (!categoryName) return;
-
-        chrome.storage.local.get(["categories"], function (result) {
-            const categories = result.categories || [];
-            if (categories.includes(categoryName)) {
-                alert("Category already exists!");
-                return;
-            }
-
-            categories.push(categoryName);
-            chrome.storage.local.set({ categories }, function () {
-                updateCategoryList();
-                document.getElementById("new-category-input").value = "";
-            });
-        });
-    }
-});
-
-// Save Video to Category
+// Update the saveVideoToCategory function to handle video removal from previous category
 function saveVideoToCategory(category, videoUrl) {
     if (!videoUrl) return;
 
@@ -570,16 +565,34 @@ function saveVideoToCategory(category, videoUrl) {
 
     chrome.storage.local.get(['videoCategories'], function(result) {
         const videoCategories = result.videoCategories || {};
+        
+        // Initialize the target category if it doesn't exist
         if (!videoCategories[category]) {
             videoCategories[category] = [];
         }
 
+        // If we're dragging from an active category and it's different from the target
+        if (dragSourceCategory && dragSourceCategory !== category) {
+            // Remove from previous category if it exists there
+            if (videoCategories[dragSourceCategory]) {
+                videoCategories[dragSourceCategory] = videoCategories[dragSourceCategory].filter(id => id !== videoID);
+                // Update the count for the source category
+                updateCategoryCount(dragSourceCategory, videoCategories[dragSourceCategory].length);
+            }
+        }
+
+        // Add to new category if not already there
         if (!videoCategories[category].includes(videoID)) {
             videoCategories[category].push(videoID);
             chrome.storage.local.set({ videoCategories }, function() {
-                // Update count in UI
+                // Update counts for both categories
                 updateCategoryCount(category, videoCategories[category].length);
-                showFeedbackMessage('Video added to category');
+                showFeedbackMessage('Video moved to category');
+                
+                // Refresh the current category view immediately
+                if (activeCategory) {
+                    filterVideosByCategory(activeCategory);
+                }
             });
         }
     });
