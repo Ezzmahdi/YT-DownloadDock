@@ -37,6 +37,9 @@ function injectSidebarUI() {
     updateCategoryList();
 }
 
+// Keep track of active category
+let activeCategory = null;
+
 // Update Category List (Now Handles Drag & Drop!)
 function updateCategoryList() {
     chrome.storage.local.get(["categories"], function (result) {
@@ -54,9 +57,35 @@ function updateCategoryList() {
             li.style.borderRadius = "5px";
             li.style.marginBottom = "5px";
             li.style.textAlign = "center";
+            li.style.transition = "background-color 0.2s";
+
+            // Highlight active category
+            if (category === activeCategory) {
+                li.style.background = "#ff4444";
+                li.style.color = "white";
+            }
 
             li.addEventListener("click", function () {
-                filterVideosByCategory(category);
+                if (category === activeCategory) {
+                    // If clicking the active category, show all videos
+                    activeCategory = null;
+                    showAllVideos();
+                    // Reset this category's styling
+                    li.style.background = "#fff";
+                    li.style.color = "inherit";
+                } else {
+                    // If clicking a new category, filter to that category
+                    activeCategory = category;
+                    filterVideosByCategory(category);
+                    // Update all category styles
+                    document.querySelectorAll("#category-list li").forEach(item => {
+                        item.style.background = "#fff";
+                        item.style.color = "inherit";
+                    });
+                    // Highlight this category
+                    li.style.background = "#ff4444";
+                    li.style.color = "white";
+                }
             });
 
             // Enable drag & drop for category names
@@ -70,6 +99,58 @@ function updateCategoryList() {
             categoryList.appendChild(li);
         });
     });
+}
+
+// Function to show all videos
+function showAllVideos() {
+    // Remove any existing category-hidden classes
+    document.querySelectorAll('.category-hidden').forEach(el => {
+        el.classList.remove('category-hidden');
+    });
+
+    // Remove any wrapper divs
+    document.querySelectorAll('.category-wrapper').forEach(wrapper => {
+        const parent = wrapper.parentElement;
+        while (wrapper.firstChild) {
+            parent.insertBefore(wrapper.firstChild, wrapper);
+        }
+        wrapper.remove();
+    });
+
+    // Show all video containers
+    const containers = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer');
+    containers.forEach(container => {
+        container.style.removeProperty('display');
+        container.style.removeProperty('visibility');
+        container.style.removeProperty('opacity');
+        container.style.removeProperty('width');
+        container.style.removeProperty('height');
+        container.style.removeProperty('margin');
+        container.style.removeProperty('padding');
+        container.style.removeProperty('overflow');
+        
+        // Remove download buttons
+        const downloadBtn = container.querySelector('.category-download-btn');
+        if (downloadBtn) {
+            downloadBtn.remove();
+        }
+    });
+
+    // Show feedback message
+    const feedbackMsg = document.createElement('div');
+    feedbackMsg.textContent = "Showing all videos";
+    feedbackMsg.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        z-index: 9999;
+    `;
+    document.body.appendChild(feedbackMsg);
+    setTimeout(() => feedbackMsg.remove(), 3000);
 }
 
 // Filter Videos and Add Download Buttons
