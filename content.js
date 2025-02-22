@@ -24,15 +24,17 @@ function injectSidebarUI() {
         .category-sidebar {
             padding: 12px 0;
             margin: 8px 0;
-            font-family: "Roboto", "Arial", sans-serif;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
         }
 
         .category-header {
-            font-size: 16px;
-            color: var(--yt-spec-text-primary);
+            font-size: 14px;
+            color: var(--yt-spec-text-secondary);
             margin-bottom: 12px;
             font-weight: 500;
             padding: 0 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .category-list {
@@ -49,8 +51,10 @@ function injectSidebarUI() {
             padding: 0 12px;
             height: 40px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.15s ease;
             color: var(--yt-spec-text-primary);
+            border-radius: 6px;
+            margin: 0 8px;
         }
 
         .category-item:hover {
@@ -59,13 +63,13 @@ function injectSidebarUI() {
 
         .category-item.active {
             background: var(--yt-spec-menu-background);
-            color: var(--yt-spec-text-primary);
+            font-weight: 500;
         }
 
         .category-icon {
-            margin-right: 24px;
-            width: 24px;
-            height: 24px;
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
             opacity: 0.7;
             color: var(--yt-spec-text-primary);
         }
@@ -73,12 +77,18 @@ function injectSidebarUI() {
         .category-name {
             flex-grow: 1;
             font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .category-count {
             margin-left: 8px;
             font-size: 12px;
             color: var(--yt-spec-text-secondary);
+            font-weight: 400;
+            min-width: 20px;
+            text-align: right;
         }
 
         .new-category-btn {
@@ -86,13 +96,16 @@ function injectSidebarUI() {
             align-items: center;
             padding: 0 12px;
             height: 40px;
-            width: 100%;
+            width: calc(100% - 16px);
+            margin: 4px 8px;
             border: none;
             background: transparent;
             cursor: pointer;
             color: var(--yt-spec-text-primary);
             font-size: 14px;
             text-align: left;
+            border-radius: 6px;
+            transition: all 0.15s ease;
         }
 
         .new-category-btn:hover {
@@ -123,48 +136,48 @@ function injectSidebarUI() {
         .modal-header {
             font-size: 20px;
             font-weight: 500;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
             color: var(--yt-spec-text-primary);
+        }
+
+        .modal-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .modal-input {
-            width: 100%;
-            padding: 8px 12px;
+            flex: 1;
+            padding: 10px 12px;
             border: 1px solid var(--yt-spec-10-percent-layer);
-            border-radius: 4px;
-            margin-bottom: 16px;
-            background: var(--yt-spec-brand-background-primary);
+            border-radius: 6px;
+            background: transparent;
             color: var(--yt-spec-text-primary);
+            font-size: 14px;
+            transition: all 0.15s ease;
         }
 
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
+        .modal-input:focus {
+            outline: none;
+            border-color: #000;
+            background: rgba(0, 0, 0, 0.05);
         }
 
         .modal-button {
             padding: 0 16px;
             height: 36px;
             border: none;
-            border-radius: 18px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
             font-size: 14px;
-        }
-
-        .modal-button.primary {
-            background: var(--yt-spec-call-to-action);
-            color: white;
-        }
-
-        .modal-button.secondary {
-            background: transparent;
-            color: var(--yt-spec-text-primary);
+            transition: all 0.15s ease;
+            background-color: #000 !important;
+            color: #fff !important;
         }
 
         .modal-button:hover {
-            opacity: 0.9;
+            background-color: #2d2d2d !important;
         }
     `;
     document.head.appendChild(style);
@@ -194,10 +207,9 @@ function injectSidebarUI() {
         <div class="modal-overlay">
             <div class="modal-content">
                 <div class="modal-header">Create New Category</div>
-                <input type="text" id="new-category-input" class="modal-input" placeholder="Category name">
-                <div class="modal-buttons">
-                    <button id="cancel-category" class="modal-button secondary">Cancel</button>
-                    <button id="add-category" class="modal-button primary">Create</button>
+                <div class="modal-input-group">
+                    <input type="text" id="new-category-input" class="modal-input" placeholder="Category name">
+                    <button id="add-category" class="modal-button" style="background-color: #000; color: #fff;">Create</button>
                 </div>
             </div>
         </div>
@@ -210,9 +222,15 @@ function injectSidebarUI() {
         document.getElementById('new-category-input').focus();
     });
 
-    document.getElementById('cancel-category').addEventListener('click', () => {
-        document.getElementById('category-modal').style.display = 'none';
-        document.getElementById('new-category-input').value = '';
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('category-modal');
+        const modalContent = modal?.querySelector('.modal-content');
+        if (e.target.closest('.modal-content')) return; // Click inside modal
+        if (e.target.id === 'new-category-btn') return; // Click on new category button
+        if (modal && modal.style.display === 'block') {
+            modal.style.display = 'none';
+            document.getElementById('new-category-input').value = '';
+        }
     });
 
     document.getElementById('add-category').addEventListener('click', () => {
@@ -229,6 +247,12 @@ function injectSidebarUI() {
                     });
                 }
             });
+        }
+    });
+
+    document.getElementById('new-category-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('add-category').click();
         }
     });
 
@@ -427,20 +451,7 @@ function filterVideosByCategory(category) {
             });
 
             // Show feedback
-            const feedbackMsg = document.createElement('div');
-            feedbackMsg.textContent = `Showing ${found} videos from category: ${category}`;
-            feedbackMsg.style.cssText = `
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                padding: 10px;
-                border-radius: 4px;
-                z-index: 9999;
-            `;
-            document.body.appendChild(feedbackMsg);
-            setTimeout(() => feedbackMsg.remove(), 3000);
+            showFeedbackMessage(`Showing ${found} videos in category "${category}"`);
 
             return found > 0;
         }
@@ -496,20 +507,7 @@ function showAllVideos() {
     });
 
     // Show feedback message
-    const feedbackMsg = document.createElement('div');
-    feedbackMsg.textContent = "Showing all videos";
-    feedbackMsg.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        z-index: 9999;
-    `;
-    document.body.appendChild(feedbackMsg);
-    setTimeout(() => feedbackMsg.remove(), 3000);
+    showFeedbackMessage("Showing all videos");
 }
 
 // Helper function to clean video URL (Fix Matching Issue)
@@ -562,27 +560,41 @@ document.addEventListener("click", function (event) {
 
 // Save Video to Category
 function saveVideoToCategory(category, videoUrl) {
+    if (!videoUrl) return;
+
     const videoID = extractVideoID(videoUrl);
-    console.log(` Extracted video ID: ${videoUrl}`);
     if (!videoID) {
-        console.error(" Error: Invalid video ID.");
+        console.error('Invalid video URL:', videoUrl);
         return;
     }
 
-    chrome.storage.local.get(["videoCategories"], function (result) {
-        let videoCategories = result.videoCategories || {};
-
+    chrome.storage.local.get(['videoCategories'], function(result) {
+        const videoCategories = result.videoCategories || {};
         if (!videoCategories[category]) {
             videoCategories[category] = [];
         }
 
         if (!videoCategories[category].includes(videoID)) {
             videoCategories[category].push(videoID);
-            chrome.storage.local.set({ videoCategories }, function () {
-                console.log(` Video saved: ${videoID} under category: ${category}`);
+            chrome.storage.local.set({ videoCategories }, function() {
+                // Update count in UI
+                updateCategoryCount(category, videoCategories[category].length);
+                showFeedbackMessage('Video added to category');
             });
-        } else {
-            console.log(` Video already exists in category: ${category}`);
+        }
+    });
+}
+
+// Function to update category count in UI
+function updateCategoryCount(category, count) {
+    const categoryItems = document.querySelectorAll('.category-item');
+    categoryItems.forEach(item => {
+        const nameEl = item.querySelector('.category-name');
+        if (nameEl && nameEl.textContent === category) {
+            const countEl = item.querySelector('.category-count');
+            if (countEl) {
+                countEl.textContent = count;
+            }
         }
     });
 }
@@ -608,6 +620,26 @@ const observer = new MutationObserver(() => {
     makeVideosDraggable();
 });
 observer.observe(document.body, { childList: true, subtree: true });
+
+// Function to show feedback message
+function showFeedbackMessage(message) {
+    const feedbackMsg = document.createElement('div');
+    feedbackMsg.textContent = message;
+    feedbackMsg.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 16px;
+        border-radius: 20px;
+        z-index: 9999;
+        font-size: 14px;
+        backdrop-filter: blur(4px);
+    `;
+    document.body.appendChild(feedbackMsg);
+    setTimeout(() => feedbackMsg.remove(), 2000);
+}
 
 // Run Everything on Load
 window.onload = function () {
