@@ -18,81 +18,261 @@ function injectSidebarUI() {
 
     if (document.getElementById("sidebar-category-organizer")) return;
 
+    // Add required styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .category-sidebar {
+            padding: 12px 0;
+            margin: 8px 0;
+            font-family: "Roboto", "Arial", sans-serif;
+        }
+
+        .category-header {
+            font-size: 16px;
+            color: var(--yt-spec-text-primary);
+            margin-bottom: 12px;
+            font-weight: 500;
+            padding: 0 12px;
+        }
+
+        .category-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            height: 40px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: var(--yt-spec-text-primary);
+        }
+
+        .category-item:hover {
+            background: var(--yt-spec-menu-background);
+        }
+
+        .category-item.active {
+            background: var(--yt-spec-menu-background);
+            color: var(--yt-spec-text-primary);
+        }
+
+        .category-icon {
+            margin-right: 24px;
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
+            color: var(--yt-spec-text-primary);
+        }
+
+        .category-name {
+            flex-grow: 1;
+            font-size: 14px;
+        }
+
+        .category-count {
+            margin-left: 8px;
+            font-size: 12px;
+            color: var(--yt-spec-text-secondary);
+        }
+
+        .new-category-btn {
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            height: 40px;
+            width: 100%;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--yt-spec-text-primary);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .new-category-btn:hover {
+            background: var(--yt-spec-menu-background);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: var(--yt-spec-brand-background-solid, #fff);
+            padding: 24px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90vw;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--yt-spec-text-primary);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--yt-spec-10-percent-layer);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            background: var(--yt-spec-brand-background-primary);
+            color: var(--yt-spec-text-primary);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .modal-button {
+            padding: 0 16px;
+            height: 36px;
+            border: none;
+            border-radius: 18px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .modal-button.primary {
+            background: var(--yt-spec-call-to-action);
+            color: white;
+        }
+
+        .modal-button.secondary {
+            background: transparent;
+            color: var(--yt-spec-text-primary);
+        }
+
+        .modal-button:hover {
+            opacity: 0.9;
+        }
+    `;
+    document.head.appendChild(style);
+
     const categoryBox = document.createElement("div");
     categoryBox.id = "sidebar-category-organizer";
-    categoryBox.style.padding = "10px";
-    categoryBox.style.marginTop = "10px";
-    categoryBox.style.background = "#f9f9f9";
-    categoryBox.style.borderRadius = "10px";
-    categoryBox.style.border = "1px solid #ddd";
+    categoryBox.className = "category-sidebar";
 
     categoryBox.innerHTML = `
-        <h3 style="font-size: 14px; color: #333; margin-bottom: 10px;"> Categories</h3>
-        <ul id="category-list" style="list-style: none; padding: 5px; margin: 0; max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 6px; background: #fff;"></ul>
-        <input type="text" id="new-category" placeholder="New category" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px;">
-        <button id="add-category" style="width: 100%; padding: 6px; background: #ff4444; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 8px;"> Add</button>
+        <h3 class="category-header">Categories</h3>
+        <ul id="category-list" class="category-list"></ul>
+        <button id="new-category-btn" class="new-category-btn">
+            <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            New Category
+        </button>
     `;
 
     sidebar.appendChild(categoryBox);
+
+    // Add modal HTML
+    const modal = document.createElement('div');
+    modal.id = 'category-modal';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">Create New Category</div>
+                <input type="text" id="new-category-input" class="modal-input" placeholder="Category name">
+                <div class="modal-buttons">
+                    <button id="cancel-category" class="modal-button secondary">Cancel</button>
+                    <button id="add-category" class="modal-button primary">Create</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Add modal event listeners
+    document.getElementById('new-category-btn').addEventListener('click', () => {
+        document.getElementById('category-modal').style.display = 'block';
+        document.getElementById('new-category-input').focus();
+    });
+
+    document.getElementById('cancel-category').addEventListener('click', () => {
+        document.getElementById('category-modal').style.display = 'none';
+        document.getElementById('new-category-input').value = '';
+    });
+
+    document.getElementById('add-category').addEventListener('click', () => {
+        const categoryName = document.getElementById('new-category-input').value.trim();
+        if (categoryName) {
+            chrome.storage.local.get(['categories'], function(result) {
+                const categories = result.categories || [];
+                if (!categories.includes(categoryName)) {
+                    categories.push(categoryName);
+                    chrome.storage.local.set({ categories }, function() {
+                        updateCategoryList();
+                        document.getElementById('category-modal').style.display = 'none';
+                        document.getElementById('new-category-input').value = '';
+                    });
+                }
+            });
+        }
+    });
+
     updateCategoryList();
 }
 
-// Keep track of active category
-let activeCategory = null;
-
-// Update Category List (Now Handles Drag & Drop!)
+// Update the updateCategoryList function to show video counts
 function updateCategoryList() {
-    chrome.storage.local.get(["categories"], function (result) {
-        const categoryList = document.getElementById("category-list");
-        categoryList.innerHTML = "";
+    chrome.storage.local.get(['categories', 'videoCategories'], function(result) {
+        const categoryList = document.getElementById('category-list');
+        categoryList.innerHTML = '';
 
         const categories = result.categories || [];
+        const videoCategories = result.videoCategories || {};
+
         categories.forEach(category => {
-            const li = document.createElement("li");
-            li.innerText = category;
-            li.style.padding = "8px";
-            li.style.borderBottom = "1px solid #ddd";
-            li.style.cursor = "pointer";
-            li.style.background = "#fff";
-            li.style.borderRadius = "5px";
-            li.style.marginBottom = "5px";
-            li.style.textAlign = "center";
-            li.style.transition = "background-color 0.2s";
+            const videosInCategory = videoCategories[category] || [];
+            const li = document.createElement('li');
+            li.className = `category-item ${category === activeCategory ? 'active' : ''}`;
+            
+            li.innerHTML = `
+                <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="category-name">${category}</span>
+                <span class="category-count">${videosInCategory.length}</span>
+            `;
 
-            // Highlight active category
-            if (category === activeCategory) {
-                li.style.background = "#ff4444";
-                li.style.color = "white";
-            }
-
-            li.addEventListener("click", function () {
+            li.addEventListener('click', function() {
+                document.querySelectorAll('.category-item').forEach(item => item.classList.remove('active'));
                 if (category === activeCategory) {
-                    // If clicking the active category, show all videos
                     activeCategory = null;
                     showAllVideos();
-                    // Reset this category's styling
-                    li.style.background = "#fff";
-                    li.style.color = "inherit";
                 } else {
-                    // If clicking a new category, filter to that category
                     activeCategory = category;
+                    li.classList.add('active');
                     filterVideosByCategory(category);
-                    // Update all category styles
-                    document.querySelectorAll("#category-list li").forEach(item => {
-                        item.style.background = "#fff";
-                        item.style.color = "inherit";
-                    });
-                    // Highlight this category
-                    li.style.background = "#ff4444";
-                    li.style.color = "white";
                 }
             });
 
-            // Enable drag & drop for category names
-            li.addEventListener("dragover", (event) => event.preventDefault());
-            li.addEventListener("drop", (event) => {
+            li.addEventListener('dragover', (event) => event.preventDefault());
+            li.addEventListener('drop', (event) => {
                 event.preventDefault();
-                const videoUrl = event.dataTransfer.getData("text/plain").trim();
+                const videoUrl = event.dataTransfer.getData('text/plain').trim();
                 saveVideoToCategory(category, videoUrl);
             });
 
@@ -101,57 +281,8 @@ function updateCategoryList() {
     });
 }
 
-// Function to show all videos
-function showAllVideos() {
-    // Remove any existing category-hidden classes
-    document.querySelectorAll('.category-hidden').forEach(el => {
-        el.classList.remove('category-hidden');
-    });
-
-    // Remove any wrapper divs
-    document.querySelectorAll('.category-wrapper').forEach(wrapper => {
-        const parent = wrapper.parentElement;
-        while (wrapper.firstChild) {
-            parent.insertBefore(wrapper.firstChild, wrapper);
-        }
-        wrapper.remove();
-    });
-
-    // Show all video containers
-    const containers = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer');
-    containers.forEach(container => {
-        container.style.removeProperty('display');
-        container.style.removeProperty('visibility');
-        container.style.removeProperty('opacity');
-        container.style.removeProperty('width');
-        container.style.removeProperty('height');
-        container.style.removeProperty('margin');
-        container.style.removeProperty('padding');
-        container.style.removeProperty('overflow');
-        
-        // Remove download buttons
-        const downloadBtn = container.querySelector('.category-download-btn');
-        if (downloadBtn) {
-            downloadBtn.remove();
-        }
-    });
-
-    // Show feedback message
-    const feedbackMsg = document.createElement('div');
-    feedbackMsg.textContent = "Showing all videos";
-    feedbackMsg.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        z-index: 9999;
-    `;
-    document.body.appendChild(feedbackMsg);
-    setTimeout(() => feedbackMsg.remove(), 3000);
-}
+// Keep track of active category
+let activeCategory = null;
 
 // Filter Videos and Add Download Buttons
 function filterVideosByCategory(category) {
@@ -329,6 +460,58 @@ function filterVideosByCategory(category) {
     });
 }
 
+// Function to show all videos
+function showAllVideos() {
+    // Remove any existing category-hidden classes
+    document.querySelectorAll('.category-hidden').forEach(el => {
+        el.classList.remove('category-hidden');
+    });
+
+    // Remove any wrapper divs
+    document.querySelectorAll('.category-wrapper').forEach(wrapper => {
+        const parent = wrapper.parentElement;
+        while (wrapper.firstChild) {
+            parent.insertBefore(wrapper.firstChild, wrapper);
+        }
+        wrapper.remove();
+    });
+
+    // Show all video containers
+    const containers = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer');
+    containers.forEach(container => {
+        container.style.removeProperty('display');
+        container.style.removeProperty('visibility');
+        container.style.removeProperty('opacity');
+        container.style.removeProperty('width');
+        container.style.removeProperty('height');
+        container.style.removeProperty('margin');
+        container.style.removeProperty('padding');
+        container.style.removeProperty('overflow');
+        
+        // Remove download buttons
+        const downloadBtn = container.querySelector('.category-download-btn');
+        if (downloadBtn) {
+            downloadBtn.remove();
+        }
+    });
+
+    // Show feedback message
+    const feedbackMsg = document.createElement('div');
+    feedbackMsg.textContent = "Showing all videos";
+    feedbackMsg.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        z-index: 9999;
+    `;
+    document.body.appendChild(feedbackMsg);
+    setTimeout(() => feedbackMsg.remove(), 3000);
+}
+
 // Helper function to clean video URL (Fix Matching Issue)
 function extractVideoID(url) {
     if (!url || typeof url !== "string") return "";
@@ -358,7 +541,7 @@ function makeVideosDraggable() {
 // Add New Category
 document.addEventListener("click", function (event) {
     if (event.target && event.target.id === "add-category") {
-        const categoryName = document.getElementById("new-category").value.trim();
+        const categoryName = document.getElementById("new-category-input").value.trim();
         if (!categoryName) return;
 
         chrome.storage.local.get(["categories"], function (result) {
@@ -371,7 +554,7 @@ document.addEventListener("click", function (event) {
             categories.push(categoryName);
             chrome.storage.local.set({ categories }, function () {
                 updateCategoryList();
-                document.getElementById("new-category").value = "";
+                document.getElementById("new-category-input").value = "";
             });
         });
     }
