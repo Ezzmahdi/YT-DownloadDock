@@ -545,12 +545,6 @@ function filterVideosByCategory(category) {
                             cursor: pointer;
                             z-index: 9999;
                         `;
-                        
-                        downloadBtn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.open(`https://www.y2mate.com/youtube/${videoData.id}`, '_blank');
-                        });
 
                         const thumbnail = container.querySelector('#thumbnail');
                         if (thumbnail) {
